@@ -1,46 +1,40 @@
-pipeline {
+ppipeline {
     agent any
 
     environment {
-            BUILD_TAG = "${BUILD_NUMBER}" 
-            PROGECT_NAME = "corso-devops"
-            // Define any environment variables here
+        BUILD_TAG    = "${BUILD_NUMBER}"
+        PROJECT_NAME = "corso-devops"
+        ECR_REGISTRY = "178686399833.dkr.ecr.eu-central-1.amazonaws.com"
     }
 
     options {
         timeout(time: 10, unit: 'MINUTES')
         disableConcurrentBuilds()
-        buildDiscarder(logRotator(numToKeepStr: '10')) 
-        
-        timestamps()   // Define any pipeline options here
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timestamps()
     }
 
     parameters {
-        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Esegui i test dopo la build?')
-        choice(name: 'ENVIONMENT', choices: ['dev', 'staging', 'production'], description: 'Seleziona l\'ambiente di deploy')
-        // Define any parameters here
+        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Salta i test dopo la build?')
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'production'], description: 'Seleziona l\'ambiente di deploy')
     }
-
 
     stages {
         stage('Checkout') {
             steps {
-                // Checkout the code from the repository
                 checkout scm
-            }
-            sh '''
-                echo "======================================"
-                echo "    OrderFLow Pipeline"
-                echo "======================================"
-                echo "Build:      #${BUILD_NUMBER}"
-                echo "Branch:    ${GIT_BRANCH}"
-                echo "Commit:    $(git log --oneline -1)"
-                echo "Environment: ${ENVIRONMENT}"
-                echo "=========================================="
+                sh '''
+                    echo "======================================"
+                    echo "    OrderFlow Pipeline"
+                    echo "======================================"
+                    echo "Build:       #${BUILD_NUMBER}"
+                    echo "Branch:      ${GIT_BRANCH}"
+                    echo "Commit:      $(git log --oneline -1)"
+                    echo "Environment: ${ENVIRONMENT}"
+                    echo "======================================"
                 '''
-
                 echo "Checkout completato"
-
+            }
         }
 
         stage('Setup Tools') {
@@ -49,7 +43,7 @@ pipeline {
                     echo "=== Installing required tools ==="
                     TOOLS_DIR="${JENKINS_HOME}/bin"
                     mkdir -p "${TOOLS_DIR}"
- 
+
                     # AWS CLI v2
                     if ! command -v aws >/dev/null 2>&1; then
                         echo "Installing AWS CLI v2..."
@@ -61,14 +55,14 @@ pipeline {
                     else
                         echo "PASS: AWS CLI already installed ($(aws --version))"
                     fi
- 
+
                     echo "=== Tools ready ==="
                 '''
             }
         }
 
         stage('Validation') {
-          steps{
+            steps {
                 sh '''
                     echo "=== Validating project structure ==="
                     ERRORS=0
@@ -95,62 +89,45 @@ pipeline {
                     echo "Validation PASSED"
                 '''
             }
-         }
+        }
 
-        stage("build order service") {
-        steps {
-            sh '''
-
+        stage('Build order-service') {
+            steps {
+                sh '''
                     docker build \
-
                         -t ${PROJECT_NAME}/order-service:${BUILD_TAG} \
-
                         -t ${PROJECT_NAME}/order-service:latest \
-
                         ./order-service
-
                 '''
-        }
-
-    }
-
-        stage('build inventory service') {
-        steps {
-            sh '''
-
-                    docker build \
-
-                        -t ${PROJECT_NAME}/inventory-service:${BUILD_TAG} \
-
-                        -t ${PROJECT_NAME}/inventory-service:latest \
-
-                        ./inventory-service
-
-                '''
-        }
-
-        stage('build notificatiion service') {
-        steps {
-            sh '''
-
-                    docker build \
-
-                        -t ${PROJECT_NAME}/notification-service:${BUILD_TAG} \
-
-                        -t ${PROJECT_NAME}/notification-service:latest \
-
-                        ./notification-service
-
-                '''
-        }
-
-        stage('tets order service') {
-            when {
-                expression { 
-                    !params.SKIP_TESTS
-                 }
             }
+        }
 
+        stage('Build inventory-service') {
+            steps {
+                sh '''
+                    docker build \
+                        -t ${PROJECT_NAME}/inventory-service:${BUILD_TAG} \
+                        -t ${PROJECT_NAME}/inventory-service:latest \
+                        ./inventory-service
+                '''
+            }
+        }
+
+        stage('Build notification-service') {
+            steps {
+                sh '''
+                    docker build \
+                        -t ${PROJECT_NAME}/notification-service:${BUILD_TAG} \
+                        -t ${PROJECT_NAME}/notification-service:latest \
+                        ./notification-service
+                '''
+            }
+        }
+
+        stage('Test order-service') {
+            when {
+                expression { !params.SKIP_TESTS }
+            }
             steps {
                 sh '''
                     echo "=== Testing order-service ==="
@@ -160,17 +137,12 @@ pipeline {
                         || echo "No tests directory yet"
                 '''
             }
-        
-
         }
 
-        stage('tets inventory service') {
+        stage('Test inventory-service') {
             when {
-                expression { 
-                    !params.SKIP_TESTS
-                 }
+                expression { !params.SKIP_TESTS }
             }
-
             steps {
                 sh '''
                     echo "=== Testing inventory-service ==="
@@ -180,17 +152,12 @@ pipeline {
                         || echo "No tests directory yet"
                 '''
             }
-        
-
         }
 
-        stage('tets notificatiion service') {
+        stage('Test notification-service') {
             when {
-                expression { 
-                    !params.SKIP_TESTS
-                 }
+                expression { !params.SKIP_TESTS }
             }
-
             steps {
                 sh '''
                     echo "=== Testing notification-service ==="
@@ -209,10 +176,6 @@ pipeline {
                         credentialsId: 'aws-credentials',
                         usernameVariable: 'AWS_ACCESS_KEY_ID',
                         passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                    ),
-                    string(
-                        credentialsId: 'ecr-registry-url',
-                        variable: 'ECR_REGISTRY'
                     )
                 ]) {
                     sh '''
@@ -220,7 +183,7 @@ pipeline {
                         aws ecr get-login-password --region eu-central-1 | \
                             docker login --username AWS \
                             --password-stdin ${ECR_REGISTRY}
- 
+
                         echo "=== Pushing images ==="
                         for svc in order-service inventory-service notification-service; do
                             echo "--- Pushing ${svc} ---"
@@ -256,3 +219,4 @@ pipeline {
             cleanWs()
         }
     }
+}
