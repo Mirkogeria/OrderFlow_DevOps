@@ -216,8 +216,16 @@ pipeline{
                     )
 
                 ]) {
+                    script {
+                        // Definisci le variabili se non esistono già
+                        if (!env.PROJECT_NAME) {
+                        env.PROJECT_NAME = 'corso-devops'  // o come si chiama il tuo progetto
+                        }
+                        if (!env.BUILD_TAG) {
+                        env.BUILD_TAG = "${env.BUILD_NUMBER}"  // usa il numero di build
+                    }
 
-                    sh '''
+                        sh '''
 
                         echo "=== Logging into ECR ==="
 
