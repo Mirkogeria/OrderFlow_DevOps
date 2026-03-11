@@ -228,20 +228,22 @@ pipeline{
 
                         sh '''
                             echo "=== Logging in to ECR ==="
-                            aws ecr get-login-password --region eu-central-1 | \\
-                                docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                            docker tag ${PROJECT}/order-service:${BUILD_TAG} \${ECR_REGISTRY}/order-service:${BUILD_TAG}
+                            docker tag ${PROJECT}/order-service:latest \${ECR_REGISTRY}/order-service:latest
+                            docker push \${ECR_REGISTRY}/order-service:${BUILD_TAG}
+                            docker push \${ECR_REGISTRY}/order-service:latest
 
-                            echo "=== Pushing images ==="
-                            for svc in order-service inventory-service notification-service; do
-                                echo "--- Pushing ${svc} ---"
-                                docker tag ${PROJECT_NAME}/&{svc}:${BUILD_TAG} \\
-                                    ${ECR_REGISTRY}/${svc}:${BUILD_TAG}
-                                docker tag ${PROJECT_NAME}/&{svc}:latest \\
-                                    ${ECR_REGISTRY}/${svc}:latest
-                                docker push ${ECR_REGISTRY}/${svc}:${BUILD_TAG}
-                                docker push ${ECR_REGISTRY}/${svc}:latest
-                                echo "${svc} pushed successfully"
-                            done
+                            docker tag ${PROJECT}/inventory-service:${BUILD_TAG} \${ECR_REGISTRY}/inventory-service:${BUILD_TAG}
+                            docker tag ${PROJECT}/inventory-service:latest \${ECR_REGISTRY}/inventory-service:latest
+                            docker push \${ECR_REGISTRY}/inventory-service:${BUILD_TAG}
+                            docker push \${ECR_REGISTRY}/inventory-service:latest
+
+                            docker tag ${PROJECT}/notification-service:${BUILD_TAG} \${ECR_REGISTRY}/notification-service:${BUILD_TAG}
+                            docker tag ${PROJECT}/notification-service:latest \${ECR_REGISTRY}/notification-service:latest
+                            docker push \${ECR_REGISTRY}/notification-service:${BUILD_TAG}
+                            docker push \${ECR_REGISTRY}/notification-service:latest
+
+                            echo "=== All images pushed ==="
                         '''
                     }
                     
