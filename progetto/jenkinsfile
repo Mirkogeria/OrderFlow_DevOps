@@ -231,13 +231,13 @@ pipeline{
 
                             echo "--- Pushing ${svc} ---"
 
-                            docker tag ${PROJECT_NAME}/${svc}:${BUILD_TAG} ${ECR_REGISTRY}/${svc}:${BUILD_TAG}
+                            docker tag ${PROJECT_NAME}/${svc}:${BUILD_TAG} ${ECR_REGISTRY}/corso-devops-${svc}:${BUILD_TAG}
 
-                            docker tag ${PROJECT_NAME}/${svc}:latest ${ECR_REGISTRY}/${svc}:latest
+                            docker tag ${PROJECT_NAME}/${svc}:latest ${ECR_REGISTRY}/corso-devops-${svc}:latest
 
-                            docker push ${ECR_REGISTRY}/${svc}:${BUILD_TAG}
+                            docker push ${ECR_REGISTRY}/corso-devops-${svc}:${BUILD_TAG}
 
-                            docker push ${ECR_REGISTRY}/${svc}:latest
+                            docker push ${ECR_REGISTRY}/corso-devops-${svc}:latest
 
                             echo "${svc} pushed successfully"
 
