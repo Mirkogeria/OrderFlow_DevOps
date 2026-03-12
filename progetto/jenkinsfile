@@ -104,90 +104,170 @@ pipeline{
             }
         }
 
-        stage('build order service'){
-            steps{
-                sh '''
-                    docker build \
-                        -t ${PROJECT_NAME}/order-service:${BUILD_TAG} \
-                        -t ${PROJECT_NAME}/order-service:latest \
-                        ./order-service
-                '''
-            }
-        }
-
-        stage('build inventory service'){
-            steps{
-                sh '''
-                    docker build \
-                        -t ${PROJECT_NAME}/inventory-service:${BUILD_TAG} \
-                        -t ${PROJECT_NAME}/inventory-service:latest \
-                        ./inventory-service
-                '''
-            }
-        }
-
-        stage('build notification service'){
-            steps{
-                sh '''
-                    docker build \
-                        -t ${PROJECT_NAME}/notification-service:${BUILD_TAG} \
-                        -t ${PROJECT_NAME}/notification-service:latest \
-                        ./notification-service
-                '''
-            }
-        }
-
-        stage('test order service'){
-            when{
-                expression{
-                    !params.SKIP_TESTS
+        //stage contenitore con 3 sub-stage paralleli:
+        stage('Build Images') {
+            parallel {
+                stage('Build order-service') {
+                    steps {
+                        dir('order-service') {
+                            sh 'docker build -t corso-devops/order-service:${IMAGE_TAG} -t corso-devops/order-service:latest .'
+                        }
+                    }
+                }
+                stage('Build inventory-service') {
+                    steps {
+                        dir('inventory-service') {
+                            sh 'docker build -t corso-devops/inventory-service:${IMAGE_TAG} -t corso-devops/inventory-service:latest .'
+                        }
+                    }
+                }
+                stage('Build notification-service') {
+                    steps {
+                        dir('notification-service') {
+                            sh 'docker build -t corso-devops/notification-service:${IMAGE_TAG} -t corso-devops/notification-service:latest .'
+                        }
+                    }
                 }
             }
+        }
 
-            steps{
-                sh '''
-                    echo "=== Testing order-service ==="
-                    docker run --rm \
-                        ${PROJECT_NAME}/order-service:${BUILD_TAG} \
-                        python -m pytest tests/ -v --tb=short 2>/dev/null \
-                        || echo "No tests directory yet"
-                '''
+        stage('Unit Tests') {
+            parallel {
+                stage('Test order-service') {
+                    steps {
+                        sh '''#!/bin/bash
+                            set -eo pipefail
+                            mkdir -p test-results
+                            CONTAINER="test-order-${BUILD_NUMBER}"
+                            docker rm -f "$CONTAINER" 2>/dev/null || true
+                            docker create --name "$CONTAINER" --user root \
+                                -e COVERAGE_FILE=/tmp/.coverage \
+                                ${PROJECT}/order-service:latest \
+                                sh -c "python -m pytest tests/ -v --tb=short \
+                                    --junitxml=/tmp/order-results.xml \
+                                    --cov=. --cov-report=term \
+                                    --cov-fail-under=50"
+                            docker start -a "$CONTAINER" 2>&1 | tee test-results/order-test.log
+                            TEST_EXIT=${PIPESTATUS[0]}
+                            docker cp "$CONTAINER":/tmp/order-results.xml test-results/ 2>/dev/null || true
+                            docker rm "$CONTAINER" 2>/dev/null || true
+                            exit $TEST_EXIT
+                        '''
+                    }
+                }
+                stage('Test inventory-service') {
+                    steps {
+                        sh '''#!/bin/bash
+                            set -eo pipefail
+                            mkdir -p test-results
+                            CONTAINER="test-inventory-${BUILD_NUMBER}"
+                            docker rm -f "$CONTAINER" 2>/dev/null || true
+                            docker create --name "$CONTAINER" --user root \
+                                -e COVERAGE_FILE=/tmp/.coverage \
+                                ${PROJECT}/inventory-service:latest \
+                                sh -c "python -m pytest tests/ -v --tb=short \
+                                    --junitxml=/tmp/inventory-results.xml \
+                                    --cov=. --cov-report=term \
+                                    --cov-fail-under=50"
+                            docker start -a "$CONTAINER" 2>&1 | tee test-results/inventory-test.log
+                            TEST_EXIT=${PIPESTATUS[0]}
+                            docker cp "$CONTAINER":/tmp/inventory-results.xml test-results/ 2>/dev/null || true
+                            docker rm "$CONTAINER" 2>/dev/null || true
+                            exit $TEST_EXIT
+                        '''
+                    }
+                }
+                stage('Test notification-service') {
+                    steps {
+                        sh '''#!/bin/bash
+                            set -eo pipefail
+                            mkdir -p test-results
+                            CONTAINER="test-notification-${BUILD_NUMBER}"
+                            docker rm -f "$CONTAINER" 2>/dev/null || true
+                            docker create --name "$CONTAINER" --user root \
+                                -e COVERAGE_FILE=/tmp/.coverage \
+                                ${PROJECT}/notification-service:latest \
+                                sh -c "python -m pytest tests/ -v --tb=short \
+                                    --junitxml=/tmp/notification-results.xml \
+                                    --cov=. --cov-report=term \
+                                    --cov-fail-under=50"
+                            docker start -a "$CONTAINER" 2>&1 | tee test-results/notification-test.log
+                            TEST_EXIT=${PIPESTATUS[0]}
+                            docker cp "$CONTAINER":/tmp/notification-results.xml test-results/ 2>/dev/null || true
+                            docker rm "$CONTAINER" 2>/dev/null || true
+                            exit $TEST_EXIT
+                        '''
+                    }
+                }
             }
         }
 
-        stage('test inventory service'){
-            when{
-                expression{
-                    !params.SKIP_TESTS
-                }
-            }
-
-            steps{
+        stage('Integration Test') {
+            steps {
                 sh '''
-                    echo "=== Testing inventory-service ==="
-                    docker run --rm \
-                        ${PROJECT_NAME}/inventory-service:${BUILD_TAG} \
-                        python -m pytest tests/ -v --tb=short 2>/dev/null \
-                        || echo "No tests directory yet"
+                    echo "=== Starting Integration Tests ==="
+
+                    # 1. Start postgres first and wait for it to be healthy
+                    docker-compose -f docker-compose.yml up -d postgres
+                    echo "Waiting for postgres to be healthy..."
+                    PGWAIT=0
+                    while [ $PGWAIT -lt 60 ]; do
+                        PG_STATUS=$(docker inspect --format='{{.State.Health.Status}}' orderflow-postgres 2>/dev/null || echo "missing")
+                        echo "  [${PGWAIT}s] postgres: $PG_STATUS"
+                        if [ "$PG_STATUS" = "healthy" ]; then
+                            break
+                        fi
+                        sleep 3
+                        PGWAIT=$((PGWAIT + 3))
+                    done
+                    if [ "$PG_STATUS" != "healthy" ]; then
+                        echo "FAIL: postgres did not become healthy within 60s"
+                        docker logs orderflow-postgres --tail 30 2>&1 || true
+                        exit 1
+                    fi
+
+                    # 2. Start application services (postgres is already healthy)
+                    docker-compose -f docker-compose.yml up -d order-service inventory-service notification-service
+
+                    # 3. Wait for all 4 services to be healthy (up to 90s)
+                    echo "Waiting for application services to become healthy..."
+                    MAX_WAIT=90
+                    ELAPSED=0
+                    ALL_HEALTHY=false
+                    while [ $ELAPSED -lt $MAX_WAIT ]; do
+                        HEALTHY=$(docker ps --filter "name=orderflow" --filter "health=healthy" -q | wc -l)
+                        echo "  [${ELAPSED}s] Healthy containers: $HEALTHY / 4"
+                        if [ "$HEALTHY" -ge 4 ]; then
+                            ALL_HEALTHY=true
+                            echo "All services healthy!"
+                            break
+                        fi
+                        sleep 5
+                        ELAPSED=$((ELAPSED + 5))
+                    done
+
+                    if [ "$ALL_HEALTHY" != "true" ]; then
+                        echo "FAIL: Services did not become healthy within ${MAX_WAIT}s"
+                        docker ps --filter "name=orderflow"
+                        for SVC in orderflow-postgres orderflow-order orderflow-inventory orderflow-notification; do
+                            echo "--- Logs for $SVC ---"
+                            docker logs "$SVC" --tail 20 2>&1 || true
+                        done
+                        exit 1
+                    fi
+
+                    # 4. Run the integration test container on the same network
+                    docker-compose \
+                        -f docker-compose.yml \
+                        -f docker-compose.test.yml \
+                        run --rm integration-test
+                    echo "=== All integration tests passed! ==="
                 '''
             }
-        }
-
-        stage('test notification service'){
-            when{
-                expression{
-                    !params.SKIP_TESTS
+            post {
+                always {
+                    sh 'docker-compose -f docker-compose.yml -f docker-compose.test.yml down -v --remove-orphans || true'
                 }
-            }
-
-            steps{
-                sh '''
-                    echo "=== Testing notification-service ==="
-                    docker run --rm \
-                        ${PROJECT_NAME}/notification-service:${BUILD_TAG} \
-                        python -m pytest tests/ -v --tb=short 2>/dev/null \
-                        || echo "No tests directory yet"
-                '''
             }
         }
 
