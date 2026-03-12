@@ -1,12 +1,8 @@
-.git
-.gitignore
 __pycache__
 *.pyc
+*.pyo
 .env
-.venv
-tests/
-docs/
+.git
+.gitignore
 *.md
-docker-compose*.yml
-.pytest_cache
-.coverage
+.venv

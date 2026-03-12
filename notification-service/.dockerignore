@@ -4,7 +4,6 @@ __pycache__
 *.pyc
 .env
 .venv
-tests/
 docs/
 *.md
 docker-compose*.yml

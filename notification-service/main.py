@@ -1,27 +1,20 @@
 # OrderFlow - Notification Service
-# Settimana 3, Giorno 4 — Architettura Microservizi
-#
-# Receives order events from other services and maintains a notification log.
-# In production, this would send emails via SES or SMS via SNS (Settimana 2, Giorno 3).
-# In the Docker Compose environment, it logs notifications internally.
-#
+# Receives order events and maintains a notification log.
 # Run: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-import os
 import logging
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - [corr=%(correlation_id)s] %(message)s",
-    defaults={"correlation_id": "none"}
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("notification-service")
 
-app = FastAPI(title="OrderFlow - Notification Service", version="2.0.0")
+app = FastAPI(title="OrderFlow - Notification Service", version="1.0.0")
 
 # In-memory notification log
 notifications_db: list = []
@@ -35,37 +28,17 @@ class NotificationCreate(BaseModel):
     timestamp: Optional[str] = None
 
 
-# --- Middleware ---
-
-@app.middleware("http")
-async def correlation_id_middleware(request: Request, call_next):
-    """Propagate X-Correlation-ID from incoming requests."""
-    correlation_id = request.headers.get("X-Correlation-ID", "none")
-    request.state.correlation_id = correlation_id
-    response = await call_next(request)
-    response.headers["X-Correlation-ID"] = correlation_id
-    return response
-
-
-# --- Endpoints ---
-
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "service": "notification-service", "version": "2.0.0"}
+    return {"status": "healthy", "service": "notification-service", "version": "1.0.0"}
 
 
 @app.post("/api/notifications", status_code=201)
-def create_notification(notification: NotificationCreate, request: Request = None):
-    """
-    Receive an order event and log the notification.
-    Called by order-service in fire-and-forget mode.
-    """
+def create_notification(notification: NotificationCreate):
+    """Receive an order event and log the notification."""
     global notification_counter
-    correlation_id = getattr(request.state, "correlation_id", "none") if request else "none"
-
     notification_counter += 1
 
-    # Map event type to human-readable notification message
     messages = {
         "order.created": f"Ordine #{notification.order_id} creato per {notification.customer_name}",
         "order.confirmed": f"Ordine #{notification.order_id} confermato",
@@ -80,18 +53,13 @@ def create_notification(notification: NotificationCreate, request: Request = Non
         "customer_name": notification.customer_name,
         "event_type": notification.event_type,
         "message": messages.get(notification.event_type, f"Event: {notification.event_type}"),
-        "channel": "log",  # In production: "email", "sms", "push"
+        "channel": "log",
         "status": "sent",
         "created_at": datetime.utcnow().isoformat()
     }
     notifications_db.append(new_notification)
 
-    logger.info(
-        f"Notification created: order={notification.order_id}, "
-        f"event={notification.event_type}, channel=log",
-        extra={"correlation_id": correlation_id}
-    )
-
+    logger.info(f"Notification created: order={notification.order_id}, event={notification.event_type}")
     return new_notification
 
 
@@ -110,5 +78,4 @@ def get_notification(notification_id: int):
     for n in notifications_db:
         if n["id"] == notification_id:
             return n
-    from fastapi import HTTPException
     raise HTTPException(status_code=404, detail=f"Notification {notification_id} not found")
