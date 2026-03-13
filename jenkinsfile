@@ -276,7 +276,7 @@ pipeline {
  
         stage('Push to ECR') {
             when {
-                branch 'main'
+                expression { env.GIT_BRANCH == 'origin/main' }
             }
             steps {
                 withCredentials([
@@ -314,7 +314,7 @@ pipeline {
         // Verifica che le immagini pushate siano effettivamente presenti su ECR
         stage('Verify ECR') {
             when {
-                branch 'main'
+                expression { env.GIT_BRANCH == 'origin/main' }
             }
             steps {
                 withCredentials([
