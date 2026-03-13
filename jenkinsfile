@@ -120,7 +120,7 @@ pipeline {
                 stage('Build inventory-service') {
                     steps {
                         dir('inventory-service') {
-                            sh 'docker build --platform linux/amd64-t corso-devops/inventory-service:${IMAGE_TAG} -t corso-devops/inventory-service:latest .'
+                            sh 'docker build --platform linux/amd64 -t corso-devops/inventory-service:${IMAGE_TAG} -t corso-devops/inventory-service:latest .'
                         }
                     }
                 }
