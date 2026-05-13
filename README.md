@@ -40,34 +40,38 @@ Copre l'intero ciclo: Code → Build → Test → Release → Deploy → Operate
 
 ## Struttura del repository
 
+## Struttura del repository
+
+```
 corso-devops/
 ├── order-service/
 │   ├── main.py
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   └── tests/
-│       ├── init.py
+│       ├── __init__.py
 │       └── test_order.py
 ├── inventory-service/
 │   ├── main.py
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   └── tests/
-│       ├── init.py
+│       ├── __init__.py
 │       └── test_inventory.py
 ├── notification-service/
 │   ├── main.py
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   └── tests/
-│       ├── init.py
+│       ├── __init__.py
 │       └── test_notification.py
-├── terraform/               # fase ⑤ — infrastruttura AWS
-├── k8s/                     # fase ⑥ — manifest Kubernetes
+├── terraform/
+├── k8s/
 ├── docker-compose.yml
 ├── docker-compose.test.yml
 ├── jenkinsfile
 └── init-db.sql
+```
 
 ## Avvio locale
 
