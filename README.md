@@ -5,21 +5,24 @@ Copre l'intero ciclo: Code → Build → Test → Release → Deploy → Operate
 
 ## Architettura
 
-┌───────────────────┐   ┌───────────────────────┐    ┌────────────────────────────┐
-│   order-service   │   │  inventory-service    │    │  notification-service      │
-│   porta 5001      │   │  porta 5002           │    │  porta 5003                │
-│                   │   │                       │    │                            │
-│  POST /api/orders │   │ GET /api/products     │    │ POST /api/notifications    │
-│  GET  /api/orders │   │ GET /api/products/:id │    │ GET  /api/notifications    │
-│  PATCH .../status │   │ GET .../check-stock   │    │ GET  /api/notifications/:id│
-└───────────────────┘   └───────────────────────┘    └────────────────────────────┘
-│                        │                           │
-└────────────────────────┴───────────────────────────┘
-│
-┌───────────────┐
-│  PostgreSQL   │
-│  porta 5432   │
-└───────────────┘
+
+```
+┌─────────────────┐    ┌──────────────────────┐    ┌───────────────────────┐
+│   order-service  │    │  inventory-service    │    │  notification-service │
+│   porta 5001     │    │  porta 5002           │    │  porta 5003           │
+│                  │    │                       │    │                       │
+│  POST /api/orders│    │ GET /api/products     │    │ POST /api/notifications│
+│  GET  /api/orders│    │ GET /api/products/:id │    │ GET  /api/notifications│
+│  PATCH .../status│    │ GET .../check-stock   │    │ GET  /api/notifications/:id│
+└─────────────────┘    └──────────────────────┘    └───────────────────────┘
+         │                        │                           │
+         └────────────────────────┴───────────────────────────┘
+                                  │
+                          ┌───────────────┐
+                          │  PostgreSQL   │
+                          │  porta 5432   │
+                          └───────────────┘
+```
 
 ## Stack tecnologico
 
