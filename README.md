@@ -17,8 +17,8 @@ graph TB
     InventoryService -->|query| PostgreSQL
     NotificationService -->|store| PostgreSQL
     
-    classDef service stroke:#818cf8,fill:#eef2ff,stroke-width:2px
-    classDef database stroke:#4ade80,fill:#f0fdf4,stroke-width:2px
+    classDef service stroke:#a78bfa,fill:#1e1b4b,color:#f8fafc,stroke-width:2px
+    classDef database stroke:#4ade80,fill:#052e16,color:#f8fafc,stroke-width:2px
     
     class OrderService,InventoryService,NotificationService service
     class PostgreSQL database
