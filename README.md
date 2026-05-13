@@ -6,22 +6,22 @@ Copre l'intero ciclo: Code → Build → Test → Release → Deploy → Operate
 ## Architettura
 
 
-```
-┌───────────────────┐    ┌───────────────────────┐    ┌─────────────────────────────┐
-│   order-service   │    │  inventory-service    │    │  notification-service       │
-│   porta 5001      │    │  porta 5002           │    │  porta 5003                 │
-│                   │    │                       │    │                             │
-│  POST /api/orders │    │ GET /api/products     │    │ POST /api/notifications     │
-│  GET  /api/orders │    │ GET /api/products/:id │    │ GET  /api/notifications     │
-│  PATCH .../status │    │ GET .../check-stock   │    │ GET  /api/notifications/:id │
-└───────────────────┘    └───────────────────────┘    └─────────────────────────────┘
-         │                          │                                │
-         └──────────────────────────┴────────────────────────────────┘
-                                    │
-                            ┌───────────────┐
-                            │  PostgreSQL   │
-                            │  porta 5432   │
-                            └───────────────┘
+```mermaid
+graph TB
+    OrderService["<b>order-service</b><br/>porta 5001<br/><br/>POST /api/orders<br/>GET /api/orders<br/>PATCH .../status"]
+    InventoryService["<b>inventory-service</b><br/>porta 5002<br/><br/>GET /api/products<br/>GET /api/products/:id<br/>GET .../check-stock"]
+    NotificationService["<b>notification-service</b><br/>porta 5003<br/><br/>POST /api/notifications<br/>GET /api/notifications<br/>GET /api/notifications/:id"]
+    PostgreSQL[("<b>PostgreSQL</b><br/>porta 5432")]
+    
+    OrderService -->|query/update| PostgreSQL
+    InventoryService -->|query| PostgreSQL
+    NotificationService -->|store| PostgreSQL
+    
+    classDef service stroke:#818cf8,fill:#eef2ff,stroke-width:2px
+    classDef database stroke:#4ade80,fill:#f0fdf4,stroke-width:2px
+    
+    class OrderService,InventoryService,NotificationService service
+    class PostgreSQL database
 ```
 
 ## Stack tecnologico
