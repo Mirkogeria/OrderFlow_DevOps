@@ -1,1 +1,59 @@
 # TODO: Qdrant Helm chart override values
+# Qdrant Vector Database Helm Chart
+# Chart ufficiale: https://github.com/qdrant/qdrant-helm
+# Installazione: helm repo add qdrant https://qdrant.github.io/qdrant-helm
+# helm install qdrant qdrant/qdrant -f qdrant-values.yaml -n orderflow
+
+replicaCount: 1
+
+image:
+  repository: qdrant/qdrant
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 6333
+  grpcPort: 6334
+
+persistence:
+  enabled: true
+  storageClassName: gp2
+  size: 20Gi
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "500m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+# Qdrant config
+config:
+  log_level: info
+  api_key: "qdrant-api-key-dev"  # CAMBIA IN PRODUZIONE!
+
+# Liveness & Readiness probes
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 6333
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 6333
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+# Network Policy per isolare il traffico
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: orderflow

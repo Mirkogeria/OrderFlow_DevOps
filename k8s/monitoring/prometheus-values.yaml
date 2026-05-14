@@ -1,1 +1,70 @@
 # TODO: Prometheus Helm values
+# Prometheus Helm Chart Values
+# Installazione: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+# helm install prometheus prometheus-community/kube-prometheus-stack -f prometheus-values.yaml -n monitoring
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    
+    # Scrape interval per i ServiceMonitor
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector:
+      matchLabels:
+        prometheus: orderflow
+    
+    # Resource limits
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 1000m
+        memory: 4Gi
+
+grafana:
+  enabled: true
+  adminPassword: admin  # CAMBIA IN PRODUZIONE!
+  persistence:
+    enabled: true
+    size: 10Gi
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-operated:9090
+          access: proxy
+          isDefault: true
+
+alertmanager:
+  enabled: true
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'null'
+    receivers:
+      - name: 'null'
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
+
+prometheusOperator:
+  enabled: true
+  manageCrds: true

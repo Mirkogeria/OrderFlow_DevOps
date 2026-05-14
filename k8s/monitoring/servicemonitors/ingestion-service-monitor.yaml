@@ -1,1 +1,18 @@
 # TODO: ServiceMonitor configuration
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ingestion-service-monitor
+  namespace: orderflow
+  labels:
+    app: ingestion-service
+    prometheus: orderflow
+spec:
+  selector:
+    matchLabels:
+      app: ingestion-service
+  endpoints:
+    - port: http
+      interval: 60s
+      path: /metrics
+      scheme: http

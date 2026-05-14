@@ -1,1 +1,18 @@
 # TODO: ServiceMonitor configuration
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-service-monitor
+  namespace: orderflow
+  labels:
+    app: order-service
+    prometheus: orderflow
+spec:
+  selector:
+    matchLabels:
+      app: order-service
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+      scheme: http

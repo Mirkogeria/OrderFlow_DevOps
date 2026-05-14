@@ -1,1 +1,59 @@
 # TODO: Grafana Helm values
+# Grafana Helm Chart Values (standalone)
+# Installazione: helm repo add grafana https://grafana.github.io/helm-charts
+# helm install grafana grafana/grafana -f grafana-values.yaml -n monitoring
+
+replicas: 1
+
+adminPassword: admin  # CAMBIA IN PRODUZIONE!
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-operated:9090
+        access: proxy
+        isDefault: true
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'orderflow'
+        orgId: 1
+        folder: 'OrderFlow'
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards/orderflow
+
+dashboards:
+  orderflow:
+    microservices-overview:
+      url: https://grafana.com/api/dashboards/12114/revisions/1/download
+    kubernetes-cluster:
+      url: https://grafana.com/api/dashboards/7249/revisions/1/download
+
+persistence:
+  enabled: true
+  type: pvc
+  storageClassName: gp2
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+
+service:
+  type: LoadBalancer
+  port: 3000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
