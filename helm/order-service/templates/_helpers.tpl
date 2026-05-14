@@ -7,6 +7,7 @@ Expand the name of the chart.
 
 {{/*
 Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "order-service.fullname" -}}
 {{- if .Values.fullnameOverride }}
@@ -19,4 +20,31 @@ Create a default fully qualified app name.
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{- end }}
+{{- end }}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "order-service.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.AppVersion | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "order-service.labels" -}}
+helm.sh/chart: {{ include "order-service.chart" . }}
+{{ include "order-service.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "order-service.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "order-service.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
