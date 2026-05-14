@@ -1,0 +1,17 @@
+# Stato Terraform — mai committare
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Variabili sensibili — mai committare
+*.tfvars.local
+override.tf
+override.tf.json
+
+# Directory di lavoro Terraform
+.terraform/
+.terraform.lock.hcl
+
+# Crash log
+crash.log
+crash.*.log
