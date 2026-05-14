@@ -7,21 +7,37 @@ Copre l'intero ciclo: Code → Build → Test → Release → Deploy → Operate
 
 
 ```mermaid
-graph TB
-    OrderService["<b>order-service</b><br/>porta 5001<br/><br/>POST /api/orders<br/>GET /api/orders<br/>PATCH .../status"]
-    InventoryService["<b>inventory-service</b><br/>porta 5002<br/><br/>GET /api/products<br/>GET /api/products/:id<br/>GET .../check-stock"]
-    NotificationService["<b>notification-service</b><br/>porta 5003<br/><br/>POST /api/notifications<br/>GET /api/notifications<br/>GET /api/notifications/:id"]
-    PostgreSQL[("<b>PostgreSQL</b><br/>porta 5432")]
-    
-    OrderService -->|query/update| PostgreSQL
-    InventoryService -->|query| PostgreSQL
-    NotificationService -->|store| PostgreSQL
-    
+flowchart TB
+ subgraph Services["Services"]
+        OrderService["<b>order-service</b><br>porta 5001<br><br>POST /api/orders<br>GET /api/orders<br>PATCH .../status"]
+        InventoryService["<b>inventory-service</b><br>porta 5002<br><br>GET /api/products<br>GET /api/products/:id<br>GET .../check-stock"]
+        NotificationService["<b>notification-service</b><br>porta 5003<br><br>POST /api/notifications<br>GET /api/notifications<br>GET /api/notifications/:id"]
+  end
+ subgraph AI_Stack["AI Stack"]
+        IngestionService["<b>ingestion-service</b><br>porta 5004<br><br>POST /api/ingest<br>GET /api/collections"]
+        GenAIService["<b>genai-service</b><br>porta 5005<br><br>POST /api/chat<br>GET /api/chat/stream"]
+        Qdrant["<b>Qdrant</b><br>Vector DB"]
+        Bedrock["<b>Amazon Bedrock</b><br>Claude 3<br>Titan Embed"]
+  end
+    OrderService -- query/update --> PostgreSQL[("<b>PostgreSQL</b><br>porta 5432")]
+    InventoryService -- query --> PostgreSQL
+    NotificationService -- store --> PostgreSQL
+    IngestionService <--> Qdrant
+    GenAIService <--> Qdrant
+    GenAIService --> Bedrock
+
+     OrderService:::service
+     InventoryService:::service
+     NotificationService:::service
+     PostgreSQL:::database
+     IngestionService:::ai
+     GenAIService:::ai
+     Qdrant:::database
+     Bedrock:::external
     classDef service stroke:#a78bfa,fill:#1e1b4b,color:#f8fafc,stroke-width:2px
     classDef database stroke:#4ade80,fill:#052e16,color:#f8fafc,stroke-width:2px
-    
-    class OrderService,InventoryService,NotificationService service
-    class PostgreSQL database
+    classDef ai stroke:#22d3ee,fill:#083344,color:#ecfeff,stroke-width:2px
+    classDef external stroke:#fb923c,fill:#431407,color:#fff7ed,stroke-width:2px
 ```
 
 ## Stack tecnologico
@@ -65,6 +81,26 @@ corso-devops/
 │   └── tests/
 │       ├── __init__.py
 │       └── test_notification.py
+├── ingestion-service/       # RAG: carica e indicizza PDF su Qdrant
+│   ├── main.py
+│   ├── pyproject.toml
+│   ├── Dockerfile
+│   ├── config/
+│   ├── models/
+│   ├── loaders/
+│   ├── pipeline/
+│   └── tests/
+├── genai-service/           # RAG: chatbot con Claude su Bedrock
+│   ├── main.py
+│   ├── pyproject.toml
+│   ├── Dockerfile
+│   ├── config/
+│   ├── models/
+│   ├── retriever/
+│   ├── chains/
+│   ├── memory/
+│   ├── api/
+│   └── tests/
 ├── terraform/
 ├── k8s/
 ├── docker-compose.yml
@@ -166,7 +202,7 @@ Checkout → Setup Tools → Validation → Build Images → Unit Tests → Inte
 
 ## Roadmap
 
-- [x] Fase ① CODE — struttura microservizi + test
+- [x] Fase ① CODE — struttura 5 microservizi + test (order, inventory, notification, ingestion, genai)
 - [x] Fase ② BUILD — Dockerfile multi-stage
 - [x] Fase ③ TEST — pipeline Jenkins + pytest
 - [x] Fase ④ RELEASE — push su AWS ECR
