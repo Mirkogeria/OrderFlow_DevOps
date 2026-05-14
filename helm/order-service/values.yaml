@@ -1,0 +1,47 @@
+replicaCount: 2
+
+image:
+  repository: ACCOUNT_ID.dkr.ecr.eu-central-1.amazonaws.com/orderflow/order-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: false
+  className: alb
+  hosts:
+    - host: orderflow.example.com
+      paths:
+        - path: /api/orders
+          pathType: Prefix
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "200m"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+env:
+  ENVIRONMENT: production
+  LOG_LEVEL: INFO
+
+secrets:
+  DB_HOST: ""
+  DB_PASSWORD: ""
+
+serviceAccount:
+  create: true
+  name: order-service
+  annotations: {}
