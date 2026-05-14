@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: orderflow-prod
+  labels:
+    name: orderflow-prod
+    environment: prod

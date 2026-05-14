@@ -1,0 +1,35 @@
+image:
+  repository: ACCOUNT_ID.dkr.ecr.eu-central-1.amazonaws.com/orderflow/ingestion-service
+  tag: latest
+
+cronJob:
+  schedule: "0 2 * * *"
+  restartPolicy: OnFailure
+  backoffLimit: 3
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "200m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+env:
+  ENVIRONMENT: production
+  LOG_LEVEL: INFO
+  QDRANT_PORT: "6333"
+  QDRANT_COLLECTION: "devops-docs"
+  CHUNK_SIZE: "512"
+  CHUNK_OVERLAP: "50"
+
+secrets:
+  QDRANT_HOST: ""
+  AWS_ACCESS_KEY_ID: ""
+  AWS_SECRET_ACCESS_KEY: ""
+
+serviceAccount:
+  create: true
+  name: ingestion-service
+  annotations:
+    eks.amazonaws.com/role-arn: ""

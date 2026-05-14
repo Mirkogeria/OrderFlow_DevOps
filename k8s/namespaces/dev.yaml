@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: orderflow-dev
+  labels:
+    name: orderflow-dev
+    environment: dev

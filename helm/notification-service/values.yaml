@@ -1,0 +1,25 @@
+replicaCount: 2
+image:
+  repository: ACCOUNT_ID.dkr.ecr.eu-central-1.amazonaws.com/orderflow/notification-service
+  tag: latest
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "200m"
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+env:
+  ENVIRONMENT: production
+  LOG_LEVEL: INFO
+serviceAccount:
+  create: true
+  name: notification-service

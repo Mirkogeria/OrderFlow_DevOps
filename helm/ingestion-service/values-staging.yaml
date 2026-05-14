@@ -1,0 +1,5 @@
+cronJob:
+  schedule: "0 2 * * *"
+env:
+  ENVIRONMENT: staging
+  LOG_LEVEL: INFO

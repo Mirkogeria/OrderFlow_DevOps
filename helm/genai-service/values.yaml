@@ -1,0 +1,35 @@
+replicaCount: 2
+image:
+  repository: ACCOUNT_ID.dkr.ecr.eu-central-1.amazonaws.com/orderflow/genai-service
+  tag: latest
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "200m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+env:
+  ENVIRONMENT: production
+  LOG_LEVEL: INFO
+  QDRANT_PORT: "6333"
+  QDRANT_COLLECTION: "devops-docs"
+  MAX_TOKENS: "1024"
+  TEMPERATURE: "0.1"
+secrets:
+  QDRANT_HOST: ""
+  AWS_ACCESS_KEY_ID: ""
+  AWS_SECRET_ACCESS_KEY: ""
+serviceAccount:
+  create: true
+  name: genai-service
+  annotations:
+    eks.amazonaws.com/role-arn: ""

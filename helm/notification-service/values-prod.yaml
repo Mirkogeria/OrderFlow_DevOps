@@ -1,0 +1,15 @@
+replicaCount: 3
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "200m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+env:
+  ENVIRONMENT: production
+  LOG_LEVEL: WARN

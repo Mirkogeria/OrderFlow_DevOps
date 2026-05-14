@@ -1,0 +1,12 @@
+cronJob:
+  schedule: "0 3 * * *"
+env:
+  ENVIRONMENT: development
+  LOG_LEVEL: DEBUG
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "200m"

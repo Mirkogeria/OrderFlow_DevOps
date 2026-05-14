@@ -1,0 +1,13 @@
+cronJob:
+  schedule: "0 1 * * *"
+  backoffLimit: 5
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "500m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+env:
+  ENVIRONMENT: production
+  LOG_LEVEL: WARN
