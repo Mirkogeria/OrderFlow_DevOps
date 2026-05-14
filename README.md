@@ -200,14 +200,104 @@ Checkout → Setup Tools → Validation → Build Images → Unit Tests → Inte
 | staging | `main` | Push ECR + deploy su ECS staging |
 | prod | tag `v*` | Deploy su EKS production |
 
-## Roadmap
+## Struttura progetto (v2 — refactored)
 
-- [x] Fase ① CODE — struttura 5 microservizi + test (order, inventory, notification, ingestion, genai)
-- [x] Fase ② BUILD — Dockerfile multi-stage
-- [x] Fase ③ TEST — pipeline Jenkins + pytest
-- [x] Fase ④ RELEASE — push su AWS ECR
-- [ ] Fase ⑤ DEPLOY — Terraform (VPC, ECS, RDS, ALB)
-- [ ] Fase ⑥ OPERATE — Kubernetes manifests (EKS + Helm)
+La struttura è stata riorganizzata per separare chiaramente i tre livelli dell'infrastruttura DevOps:
+```
+OrderFlow_DevOps/
+├── order-service/
+├── inventory-service/
+├── notification-service/
+├── ingestion-service/                   # RAG: carica PDF su S3 → indicizza su Qdrant
+├── genai-service/                       # RAG: chatbot Claude su Bedrock
+│
+├── terraform/                           # Infrastructure as Code
+│   ├── modules/
+│   │   ├── vpc/                        # VPC, subnet pubblici/privati, NAT Gateway
+│   │   ├── security-groups/            # SG per EKS, RDS, ALB
+│   │   ├── ecr/                        # 5 repository ECR per i microservizi
+│   │   ├── rds/                        # PostgreSQL RDS
+│   │   ├── eks/                        # EKS cluster + node group
+│   │   ├── iam/                        # IRSA (IAM Roles for Service Accounts)
+│   │   ├── bedrock-iam/                # Policy per invocare Bedrock (Claude, Titan)
+│   │   └── s3-documents/               # S3 bucket per PDF da ingerire
+│   ├── environments/
+│   │   ├── dev/                        # main.tf collega tutti i moduli con var dev
+│   │   ├── staging/                    # CIDR diversi, RDS multi-AZ
+│   │   └── prod/
+│   └── .gitignore
+│
+├── helm/                                # Package manager Kubernetes
+│   ├── order-service/                   # Chart + values per dev/staging/prod
+│   ├── inventory-service/
+│   ├── notification-service/
+│   ├── ingestion-service/               # CronJob invece di Deployment
+│   └── genai-service/
+│
+├── k8s/                                 # Risorse cluster-wide
+│   ├── namespaces/                      # dev, staging, prod
+│   ├── monitoring/                      # Prometheus, Grafana, ServiceMonitors
+│   └── qdrant/                          # Qdrant vector DB (Helm override)
+│
+├── docker-compose.yml
+├── jenkinsfile
+└── README.md
+```
+
+## Roadmap di implementazione — Completata ✅
+
+- [x] **Fase ① CODE** — 5 microservizi Python/FastAPI con test unitari (coverage > 70%)
+- [x] **Fase ② BUILD** — Dockerfile multi-stage per ogni servizio
+- [x] **Fase ③ TEST** — Pipeline Jenkins con pytest parallelo su 5 servizi
+- [x] **Fase ④ RELEASE** — Push immagini su AWS ECR (tag build number + git SHA)
+- [x] **Fase ⑤ DEPLOY** — Terraform IaC: VPC, EKS, RDS, ECR, IAM, Bedrock, S3
+- [x] **Fase ⑥ OPERATE** — Helm Charts per 5 servizi, K8s namespaces, monitoring ready
+
+## Deployment workflow (nextgen)
+
+```
+Git push main
+↓
+Jenkins Pipeline
+├─ Checkout + Build (parallelo: 5 servizi)
+├─ Unit Tests (parallelo: 5 servizi, coverage ≥ 50%)
+├─ Integration Test (docker-compose)
+├─ Push ECR (main branch only)
+└─ Verify ECR
+↓
+Terraform apply (dev/staging/prod)
+├─ VPC + Subnet + NAT Gateway
+├─ Security Groups
+├─ EKS Cluster + Node Group
+├─ RDS PostgreSQL
+├─ ECR Repositories
+├─ IAM Roles + IRSA
+├─ Bedrock permissions
+└─ S3 Documents Bucket
+↓
+Helm deploy (helm upgrade --install)
+├─ order-service → Deployment + Service + HPA
+├─ inventory-service → Deployment + Service + HPA
+├─ notification-service → Deployment + Service + HPA
+├─ ingestion-service → CronJob (ogni notte) + ServiceAccount (IRSA)
+└─ genai-service → Deployment + Service + HPA + ServiceAccount (IRSA)
+↓
+Kubernetes Operate
+├─ Auto-scaling (HPA via CPU)
+├─ Health checks (liveness + readiness probes)
+├─ Monitoring (Prometheus + Grafana + ServiceMonitors)
+├─ Vector DB (Qdrant per RAG)
+└─ Logging (CloudWatch + container logs)
+```
+
+## Prossimi step (post-MVP)
+
+- [ ] Networking Ingress con ALB controller
+- [ ] Service Mesh (Istio) per observability
+- [ ] GitOps con ArgoCD per deployment automatici
+- [ ] Cert Manager + HTTPS su Route 53
+- [ ] Multi-region failover
+- [ ] Cost optimization (spot instances, reserved capacity)
 
 ## Autore
 
